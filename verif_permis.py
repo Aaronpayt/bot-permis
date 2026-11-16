@@ -23,8 +23,9 @@ DATE_LIMITE = datetime.date.fromisoformat(os.environ.get("DATE_LIMITE") or "2027
 # Centres à vérifier (texte exact affiché sur le site)
 CENTRES = (os.environ.get("CENTRES") or "BRAINE-LE-COMTE,COUILLET").split(",")
 
-# Les deux types d'examen (2026 = dates de décembre, 2027 = dates de janvier)
-EXAMENS = ["PRATIQUE B FINAL FL (2026)", "PRATIQUE B FINAL FL (2027)"]
+# Les examens à vérifier : toutes les cartes "PRATIQUE B FINAL..." du centre
+# (Braine : 2026 et 2027, Couillet : une seule)
+REGEX_EXAMEN = re.compile(r"^\s*pratique b final.*$", re.I)
 
 MOIS = {
     "janvier": 1, "février": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
@@ -87,7 +88,8 @@ def lire_dates(page):
     return dispo
 
 
-def verifier(page, centre, examen):
+def debut_parcours(page, centre):
+    # Étapes 1 à 3, jusqu'au choix de l'examen
     page.goto(URL)
     page.wait_for_load_state("networkidle")
     page.get_by_text(re.compile(r"prendre rendez-vous", re.I)).filter(visible=True).first.click()
@@ -99,9 +101,34 @@ def verifier(page, centre, examen):
     suivant(page)
     cliquer(page, "PERMIS PRATIQUE")  # étape 3 : type
     suivant(page)
+
+
+def lister_examens(page, centre):
+    # Renvoie les noms des cartes "PRATIQUE B FINAL..." de ce centre
+    debut_parcours(page, centre)
+    cartes = page.get_by_text(REGEX_EXAMEN).filter(visible=True)
+    cartes.first.wait_for(timeout=15000)
+    return [t.strip() for t in cartes.all_inner_texts()]
+
+
+def accepter_conditions(page):
+    # Étape 5 : coche toutes les cases (juste pour voir les dates, rien n'est réservé)
+    cases = page.locator(".p-checkbox-box").filter(visible=True)
+    if cases.count() == 0:
+        cases = page.locator("input[type=checkbox]")
+    for i in range(cases.count()):
+        cases.nth(i).click(force=True)
+        page.wait_for_timeout(200)
+
+
+def verifier(page, centre, examen):
+    debut_parcours(page, centre)
     cliquer(page, examen)             # étape 4 : examen
     suivant(page)
-    return lire_dates(page)           # étape 5 : dates
+    if page.get_by_text(re.compile(r"accepter les conditions", re.I)).count() > 0:
+        accepter_conditions(page)     # étape 5 : conditions
+        suivant(page)
+    return lire_dates(page)           # étape 6 : dates
 
 
 def envoyer_mail(resultats):
@@ -136,10 +163,20 @@ def main():
         connexion(page)
 
         for centre in CENTRES:
-            for examen in EXAMENS:
+            centre = centre.strip()
+            try:
+                examens = lister_examens(page, centre)
+            except Exception as e:
+                total += 1
+                erreurs += 1
+                print(f"ERREUR {centre} : examens introuvables : {e}")
+                page.screenshot(path=f"erreur_{total}.png", full_page=True)
+                continue
+
+            for examen in examens:
                 total += 1
                 try:
-                    dates = verifier(page, centre.strip(), examen)
+                    dates = verifier(page, centre, examen)
                     bonnes = [d for d in dates if d < DATE_LIMITE]
                     print(f"{centre} / {examen} : {len(dates)} jours dispo, {len(bonnes)} avant la limite")
                     resultats += [(centre, examen, d) for d in bonnes]
