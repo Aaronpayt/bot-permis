@@ -36,14 +36,14 @@ REGEX_DATE = re.compile(rf"^({JOURS})\s+(\d{{1,2}})\s+({'|'.join(MOIS)})(.*)$", 
 
 
 def cliquer(page, texte):
-    # Clique sur l'élément qui a exactement ce texte
-    page.get_by_text(texte, exact=True).first.click()
+    # Clique sur l'élément visible qui a exactement ce texte
+    page.get_by_text(texte, exact=True).filter(visible=True).first.click()
     page.wait_for_timeout(1000)
 
 
 def suivant(page):
     # Bouton "ÉTAPE SUIVANTE"
-    page.get_by_text(re.compile(r"étape suivante", re.I)).first.click()
+    page.get_by_text(re.compile(r"étape suivante", re.I)).filter(visible=True).first.click()
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1500)
 
@@ -89,7 +89,7 @@ def lire_dates(page):
 def verifier(page, centre, examen):
     page.goto(URL)
     page.wait_for_load_state("networkidle")
-    page.get_by_text(re.compile(r"prendre rendez-vous", re.I)).last.click()
+    page.get_by_text(re.compile(r"prendre rendez-vous", re.I)).filter(visible=True).first.click()
     page.wait_for_timeout(1500)
 
     cliquer(page, "NON")              # étape 1 : déchéance
