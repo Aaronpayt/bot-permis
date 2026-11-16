@@ -79,6 +79,9 @@ def lire_dates(page):
         trouvees = [REGEX_DATE.match(l) for l in lignes if REGEX_DATE.match(l)]
         if trouvees:
             break
+        # Aucune date du tout dans cette catégorie
+        if any(l.lower() == "aucun slot disponible" for l in lignes):
+            return []
         page.wait_for_timeout(1000)
     else:
         raise Exception("Page des dates introuvable")
