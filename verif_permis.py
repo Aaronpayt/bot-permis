@@ -21,10 +21,10 @@ GMAIL_MDP = os.environ["GMAIL_MDP_APP"]
 DATE_LIMITE = datetime.date.fromisoformat(os.environ.get("DATE_LIMITE") or "2027-01-10")
 
 # Centres à vérifier (texte exact affiché sur le site)
-CENTRES = (os.environ.get("CENTRES") or "BRAINE-LE-COMTE,COUILLET").split(",")
+CENTRES = (os.environ.get("CENTRES") or "BRAINE-LE-COMTE").split(",")
 
 # Les examens à vérifier : toutes les cartes "PRATIQUE B FINAL..." du centre
-# (Braine : 2026 et 2027, Couillet : une seule)
+# (à Braine : 2026 et 2027)
 REGEX_EXAMEN = re.compile(r"^\s*pratique b final.*$", re.I)
 
 MOIS = {
