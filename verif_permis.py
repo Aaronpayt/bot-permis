@@ -56,7 +56,7 @@ def suivant(page):
 def connexion(page):
     page.goto(URL)
     page.wait_for_load_state("networkidle")
-    page.set_default_timeout(60000)  # le site AIBV est parfois lent
+    page.set_default_timeout(30000)  # le site AIBV est parfois lent
     page.locator("input[type=email], input[name*=mail i], input[type=text]").first.fill(EMAIL)
     page.locator("input[type=password]").first.fill(MDP)
     page.locator("input[type=password]").first.press("Enter")
@@ -74,8 +74,8 @@ def convertir_date(jour, mois_txt):
 
 
 def lire_dates(page):
-    # Attend que la liste des dates s'affiche (max 60 s, le site peut être lent)
-    for _ in range(60):
+    # Attend que la liste des dates s'affiche (max 30 s, le site peut être lent)
+    for _ in range(30):
         lignes = [l.strip() for l in page.inner_text("body").splitlines()]
         trouvees = [REGEX_DATE.match(l) for l in lignes if REGEX_DATE.match(l)]
         if trouvees:
@@ -110,11 +110,23 @@ def debut_parcours(page, centre):
     suivant(page)
 
 
+def essayer(page, fonction, *args):
+    # Le site AIBV renvoie parfois une page vide : on réessaie jusqu'à 3 fois
+    for tentative in range(3):
+        try:
+            return fonction(page, *args)
+        except Exception as e:
+            if tentative == 2:
+                raise
+            print(f"  (site lent, nouvel essai : {str(e).splitlines()[0]})")
+            page.wait_for_timeout(15000)
+
+
 def lister_examens(page, centre):
     # Renvoie les noms des cartes "PRATIQUE B FINAL..." de ce centre
     debut_parcours(page, centre)
     cartes = page.get_by_text(REGEX_EXAMEN).filter(visible=True)
-    cartes.first.wait_for(timeout=60000)  # le site peut être lent
+    cartes.first.wait_for(timeout=30000)  # le site peut être lent
     return [t.strip() for t in cartes.all_inner_texts()]
 
 
@@ -174,7 +186,7 @@ def main():
         for centre in CENTRES:
             centre = centre.strip()
             try:
-                examens = lister_examens(page, centre)
+                examens = essayer(page, lister_examens, centre)
             except Exception as e:
                 total += 1
                 erreurs += 1
@@ -185,7 +197,7 @@ def main():
             for examen in examens:
                 total += 1
                 try:
-                    dates = verifier(page, centre, examen)
+                    dates = essayer(page, verifier, centre, examen)
                     bonnes = [d for d in dates if d < DATE_LIMITE]
                     print(f"{centre} / {examen} : {len(dates)} jours dispo, {len(bonnes)} avant la limite")
                     resultats += [(centre, examen, d) for d in bonnes]
