@@ -57,7 +57,7 @@ def connexion(page):
     page.locator("input[type=password]").first.fill(MDP)
     page.locator("input[type=password]").first.press("Enter")
     # On attend d'être sur le profil (bouton "Prendre rendez-vous")
-    page.get_by_text(re.compile(r"prendre rendez-vous", re.I)).first.wait_for(timeout=30000)
+    page.get_by_text(re.compile(r"prendre rendez-vous", re.I)).filter(visible=True).first.wait_for(timeout=30000)
 
 
 def convertir_date(jour, mois_txt):
