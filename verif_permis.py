@@ -27,6 +27,9 @@ CENTRES = (os.environ.get("CENTRES") or "BRAINE-LE-COMTE").split(",")
 # (à Braine : 2026 et 2027)
 REGEX_EXAMEN = re.compile(r"^\s*pratique b final.*$", re.I)
 
+# Fichier qui garde les dates déjà envoyées par mail (sauvegardé entre les runs)
+FICHIER_DEJA = "deja_envoye.txt"
+
 MOIS = {
     "janvier": 1, "février": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
     "juillet": 7, "août": 8, "septembre": 9, "octobre": 10, "novembre": 11, "décembre": 12,
@@ -189,9 +192,23 @@ def main():
 
         navigateur.close()
 
-    if resultats:
-        envoyer_mail(resultats)
+    # On n'envoie un mail que pour les dates pas encore signalées
+    deja = set()
+    if os.path.exists(FICHIER_DEJA):
+        deja = set(open(FICHIER_DEJA, encoding="utf-8").read().split())
+    cles = {f"{c}|{d.isoformat()}" for c, ex, d in resultats}
+    nouveaux = [r for r in resultats if f"{r[0]}|{r[2].isoformat()}" not in deja]
+
+    if nouveaux:
+        envoyer_mail(nouveaux)
         print("Mail envoyé !")
+    elif resultats:
+        print("Dates déjà signalées, pas de nouveau mail")
+
+    # On garde les dates dispo maintenant (si une date part puis revient, nouveau mail)
+    if erreurs < total:
+        with open(FICHIER_DEJA, "w", encoding="utf-8") as f:
+            f.write("\n".join(sorted(cles)))
 
     # Si tout a planté, on fait échouer le run (GitHub t'enverra un mail d'erreur)
     if erreurs == total:
