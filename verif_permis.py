@@ -36,8 +36,9 @@ REGEX_DATE = re.compile(rf"^({JOURS})\s+(\d{{1,2}})\s+({'|'.join(MOIS)})(.*)$", 
 
 
 def cliquer(page, texte):
-    # Clique sur l'élément visible qui a exactement ce texte
-    page.get_by_text(texte, exact=True).filter(visible=True).first.click()
+    # Clique sur l'élément visible qui a exactement ce texte (majuscules ou pas)
+    regex = re.compile(rf"^\s*{re.escape(texte)}\s*$", re.I)
+    page.get_by_text(regex).filter(visible=True).first.click()
     page.wait_for_timeout(1000)
 
 
