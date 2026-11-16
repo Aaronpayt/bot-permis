@@ -56,6 +56,7 @@ def suivant(page):
 def connexion(page):
     page.goto(URL)
     page.wait_for_load_state("networkidle")
+    page.set_default_timeout(60000)  # le site AIBV est parfois lent
     page.locator("input[type=email], input[name*=mail i], input[type=text]").first.fill(EMAIL)
     page.locator("input[type=password]").first.fill(MDP)
     page.locator("input[type=password]").first.press("Enter")
@@ -73,8 +74,8 @@ def convertir_date(jour, mois_txt):
 
 
 def lire_dates(page):
-    # Attend que la liste des dates s'affiche (max 20 s)
-    for _ in range(20):
+    # Attend que la liste des dates s'affiche (max 60 s, le site peut être lent)
+    for _ in range(60):
         lignes = [l.strip() for l in page.inner_text("body").splitlines()]
         trouvees = [REGEX_DATE.match(l) for l in lignes if REGEX_DATE.match(l)]
         if trouvees:
@@ -113,7 +114,7 @@ def lister_examens(page, centre):
     # Renvoie les noms des cartes "PRATIQUE B FINAL..." de ce centre
     debut_parcours(page, centre)
     cartes = page.get_by_text(REGEX_EXAMEN).filter(visible=True)
-    cartes.first.wait_for(timeout=15000)
+    cartes.first.wait_for(timeout=60000)  # le site peut être lent
     return [t.strip() for t in cartes.all_inner_texts()]
 
 
