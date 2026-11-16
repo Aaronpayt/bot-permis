@@ -1,0 +1,40 @@
+name: Verif permis
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # toutes les 15 minutes
+  workflow_dispatch:          # bouton pour lancer à la main
+
+jobs:
+  verif:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer Playwright
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Vérifier les dates
+        run: python verif_permis.py
+        env:
+          AIBV_EMAIL: ${{ secrets.AIBV_EMAIL }}
+          AIBV_MDP: ${{ secrets.AIBV_MDP }}
+          GMAIL_ADRESSE: ${{ secrets.GMAIL_ADRESSE }}
+          GMAIL_MDP_APP: ${{ secrets.GMAIL_MDP_APP }}
+          DATE_LIMITE: ${{ vars.DATE_LIMITE }}
+          CENTRES: ${{ vars.CENTRES }}
+
+      - name: Captures en cas d'erreur
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures
+          path: "*.png"
+          if-no-files-found: ignore
