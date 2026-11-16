@@ -159,7 +159,9 @@ def main():
 
     with sync_playwright() as p:
         navigateur = p.chromium.launch()
-        page = navigateur.new_page(locale="fr-BE")
+        # Affichage mobile : le site montre alors les dates en liste ("lundi 30 novembre")
+        contexte = navigateur.new_context(**p.devices["iPhone 13"], locale="fr-BE")
+        page = contexte.new_page()
         connexion(page)
 
         for centre in CENTRES:
